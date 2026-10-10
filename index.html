@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIUB Film Club - Ticket Searcher & Gate Pass</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20%220%22%20%22100%22%20%22100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
+</head>
+<body class="theme-dark">
+  <div class="app-wrapper">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-badge">
+          <span class="clapper-icon">🎬</span>
+        </div>
+        <div class="header-titles">
+          <div class="club-tag">AMERICAN INTERNATIONAL UNIVERSITY-BANGLADESH</div>
+          <h1 class="main-title">AIUB FILM CLUB</h1>
+          <p class="sub-title">Movie Screening Ticket Search & Gate Verification Portal</p>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="sync-status-box" id="syncStatusBox">
+          <span class="status-dot online" id="statusDot"></span>
+          <div class="status-texts">
+            <span class="status-label" id="statusLabel">Ready</span>
+            <span class="status-time" id="lastSyncTime">Checking sheets...</span>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn btn-secondary" id="btnSync" title="Sync live data from Google Sheets">
+            <span class="btn-icon" id="syncIcon">🔄</span>
+            <span class="btn-text">Sync Sheets</span>
+          </button>
+          <button class="btn btn-icon-only" id="btnToggleSound" title="Toggle audio chime on check-in">
+            <span id="soundIcon">🔔</span>
+          </button>
+          <button class="btn btn-icon-only" id="btnSettings" title="Configure Sheet Links & Offline Settings">
+            ⚙️
+          </button>
+          <button class="btn btn-icon-only" id="btnToggleTheme" title="Switch Theme (Dark / Light)">
+            🌓
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Venue Banner -->
+    <div class="venue-banner">
+      <div class="venue-item">
+        <span class="v-icon">📍</span>
+        <span><strong>Venue:</strong> AIUB Auditorium, Ground Floor, Building D</span>
+      </div>
+      <div class="venue-item">
+        <span class="v-icon">🗓️</span>
+        <span><strong>Schedule:</strong> Day 1 & Day 2 Cinema Screenings</span>
+      </div>
+      <div class="venue-item">
+        <span class="v-icon">🎫</span>
+        <span><strong>Ticket Price:</strong> 50 BDT / Slot</span>
+      </div>
+    </div>
+
+    <!-- Analytics / Stats Counters -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon-wrapper blue">🎟️</div>
+        <div class="stat-details">
+          <span class="stat-value" id="statTotalTickets">0</span>
+          <span class="stat-label">Total Registrations</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon-wrapper purple">👥</div>
+        <div class="stat-details">
+          <span class="stat-value" id="statTotalSeats">0</span>
+          <span class="stat-label">Total Passes / Seats</span>
+        </div>
+      </div>
+
+      <div class="stat-card stat-card-revenue" id="revenueCard">
+        <div class="stat-icon-wrapper amber">💰</div>
+        <div class="stat-details">
+          <span class="stat-value stat-value-hidden" id="statTotalRevenue">
+            <span class="revenue-hidden-label" id="revenueHiddenLabel">🔒 Tap to reveal</span>
+            <span class="revenue-amount" id="revenueAmount" style="display:none;">৳0</span>
+          </span>
+          <span class="stat-label">Total Collected (BDT)</span>
+        </div>
+        <button class="btn-reveal-toggle" id="btnToggleRevenue" title="Show / Hide collected amount">
+          <span id="revealIcon">👁️</span>
+        </button>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon-wrapper green">🚪</div>
+        <div class="stat-details">
+          <span class="stat-value" id="statAdmittedCount">0 / 0</span>
+          <span class="stat-label">Admitted at Gate</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Search & Filter Console -->
+    <section class="search-section">
+      <div class="search-container">
+        <div class="search-bar-wrap">
+          <span class="search-lens">🔍</span>
+          <input 
+            type="text" 
+            id="searchInput" 
+            class="search-input" 
+            placeholder="Search by Student ID (e.g. 24-57614-2), Name, Ticket # (e.g. AFC-002), TrxID, or Phone..."
+            autocomplete="off"
+            autofocus
+          >
+          <button class="clear-btn" id="btnClearSearch" title="Clear search">✕</button>
+        </div>
+
+        <div class="search-shortcuts">
+          <span class="hint-pill">Tip: Type <strong>Student ID</strong>, <strong>Name</strong> or <strong>Ticket #</strong></span>
+          <span class="shortcut-tag"><kbd>Ctrl</kbd> + <kbd>K</kbd> to focus</span>
+          <span class="shortcut-tag"><kbd>Esc</kbd> to clear</span>
+        </div>
+      </div>
+
+      <!-- Filters & View Switcher -->
+      <div class="filters-row">
+        <div class="filter-group">
+          <label for="filterDay" class="filter-label">Day:</label>
+          <select id="filterDay" class="filter-select">
+            <option value="all">All Days (Day 1 & Day 2)</option>
+            <option value="Day 1">Day 1 Only</option>
+            <option value="Day 2">Day 2 Only</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="filterMovie" class="filter-label">Movie Slot:</label>
+          <select id="filterMovie" class="filter-select">
+            <option value="all">All Movie Slots</option>
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="filterCheckIn" class="filter-label">Gate Status:</label>
+          <select id="filterCheckIn" class="filter-select">
+            <option value="all">All Statuses</option>
+            <option value="not_admitted">Pending Entry</option>
+            <option value="admitted">Admitted / Checked In</option>
+          </select>
+        </div>
+
+        <div class="view-toggles">
+          <button class="toggle-btn active" id="btnViewCards" title="Cinema Ticket Card View">
+            🎫 Cards
+          </button>
+          <button class="toggle-btn" id="btnViewTable" title="Compact Spreadsheet Table View">
+            📋 Table
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Search Results Header -->
+    <div class="results-meta-bar">
+      <div class="results-count-text" id="resultsCount">Loading tickets...</div>
+      <div class="results-actions">
+        <button class="btn btn-sm btn-outline" id="btnExportFiltered" title="Export current search results">
+          💾 Export Results
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Results Container -->
+    <main class="content-container">
+      <!-- Cards View -->
+      <div id="ticketsGrid" class="tickets-grid">
+        <!-- Rendered dynamically via JavaScript -->
+      </div>
+
+      <!-- Table View (Hidden by default) -->
+      <div id="ticketsTableView" class="table-container" style="display: none;">
+        <div class="table-responsive">
+          <table class="data-table" id="dataTable">
+            <thead>
+              <tr>
+                <th>Ticket No.</th>
+                <th>Day</th>
+                <th>Student ID</th>
+                <th>Student Name</th>
+                <th>Movie Slot</th>
+                <th>Seats</th>
+                <th>Payment</th>
+                <th>TrxID</th>
+                <th>Contact</th>
+                <th>Gate Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Empty / Not Found State -->
+      <div id="emptyState" class="empty-state" style="display: none;">
+        <div class="empty-icon">🔎</div>
+        <h3 class="empty-title" id="emptyTitle">No Ticket Found</h3>
+        <p class="empty-desc" id="emptyDesc">No matching records found. Please double check student ID format (e.g. 24-XXXXX-X) or name spelling.</p>
+        <div class="empty-suggestions">
+          <h4>Search Tips:</h4>
+          <ul>
+            <li>Try searching without hyphens (e.g. <code>24576142</code> instead of <code>24-57614-2</code>).</li>
+            <li>Search by first name or last name only.</li>
+            <li>Search by bKash/Nagad Transaction ID (TrxID) from the student's SMS.</li>
+            <li>Check if the student is registered for Day 1 or Day 2.</li>
+          </ul>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-left">
+        <span>🎬 <strong>AIUB Film Club (AFC)</strong> • Cinema Screening Verification System</span>
+      </div>
+      <div class="footer-right">
+        <span>Fully Portable HTML5 App • No Server Required • Copy & Run Anywhere</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-backdrop" id="settingsModal" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">⚙️ Portal Settings & Google Sheets Configuration</h3>
+        <button class="modal-close-btn" id="btnCloseSettings">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="settingDay1Url">
+            <strong>Day 1 Google Sheet URL / ID:</strong>
+          </label>
+          <input 
+            type="text" 
+            id="settingDay1Url" 
+            class="form-control" 
+            placeholder="https://docs.google.com/spreadsheets/d/1QrkfLwS3J8bKVyySSwsjx4Vgj8gu-XyfKQMwK-gvLTM/edit"
+          >
+          <span class="form-help">Current active Day 1 Sheet</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="settingDay2Url">
+            <strong>Day 2 Google Sheet URL / ID:</strong>
+          </label>
+          <input 
+            type="text" 
+            id="settingDay2Url" 
+            class="form-control" 
+            placeholder="https://docs.google.com/spreadsheets/d/1sGI0hkBuy80hOfdbML92ZpsSUHaQIRpiArSw6zVAzUw/edit"
+          >
+          <span class="form-help">Current active Day 2 Sheet</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="settingAutoSync">
+            <strong>Auto-Sync Frequency:</strong>
+          </label>
+          <select id="settingAutoSync" class="form-control">
+            <option value="0">Manual Sync Only</option>
+            <option value="30">Every 30 Seconds</option>
+            <option value="60" selected>Every 60 Seconds</option>
+            <option value="300">Every 5 Minutes</option>
+          </select>
+        </div>
+
+        <hr class="divider">
+
+        <div class="settings-backup-section">
+          <h4>📦 Data Backup & Offline Import</h4>
+          <p class="section-subtext">Export data for offline use or import downloaded CSV directly if without internet.</p>
+          <div class="backup-buttons">
+            <button class="btn btn-outline" id="btnExportAllJson">📥 Export Full JSON</button>
+            <button class="btn btn-outline" id="btnExportAllCsv">📥 Export Full CSV</button>
+            <label class="btn btn-outline file-input-label">
+              📤 Import CSV File
+              <input type="file" id="importCsvInput" accept=".csv" style="display: none;">
+            </label>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="danger-zone">
+          <h4>⚠️ Gate Admissions Cache</h4>
+          <p class="section-subtext">Reset local gate admission timestamps (useful when starting a new screening).</p>
+          <button class="btn btn-danger-outline" id="btnResetAdmissions">Reset Check-In Records</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnRestoreDefaultSheets">Restore Defaults</button>
+        <button class="btn btn-primary" id="btnSaveSettings">Save & Refresh</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Print Modal / Hidden Printable Slip -->
+  <div id="printArea" class="print-area"></div>
+
+  <!-- Toast Notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Preloaded Data for 100% Offline Resilience -->
+  <script src="sample-data.js"></script>
+  <!-- Main Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
